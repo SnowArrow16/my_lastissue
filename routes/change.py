@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, session, Blueprint
+from flask import render_template, request, redirect, url_for, send_file, session, Blueprint
 import os
 from routes.negaposi import negaposi
 from routes.mosaic import MosaicCov
