@@ -1,12 +1,14 @@
 from flask import render_template, request, redirect, url_for, send_file, session, Blueprint
 import os
-from routes.negaposi import negaposi
-from routes.mosaic import MosaicCov
-from routes.Gaussian import gaussian
-from routes.Thresholding import thresholding
-from routes.edge_detection import edge_detection
-from routes.img_quality import enhance_image_advanced
-from routes.Inversion import inversion
+from .negaposi import negaposi
+from .mosaic import MosaicCov
+from .Gaussian import gaussian
+from .Thresholding import thresholding
+from .edge_detection import edge_detection
+from .img_quality import enhance_image_advanced
+from .Inversion import inversion
+from .stamp import stamp
+from .convert2crayon_style import convert_to_crayon_style
 from models import History, User
 import base64
 import datetime
@@ -29,6 +31,22 @@ def upload():
         filepath = os.path.join('static', 'img.png')
         file.save(filepath)
         return redirect(url_for('change.change', user_name = session['user_name']))
+    
+#スタンプ画像用のエンドポイント------------------------------------------------------------------------------------------------------
+change_bp.route('/upload_stamp', methods=['POST'])
+def upload_stamp():
+    if 'file' not in request.files:
+        return 'スタンプ画像が選択されていません。', 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return 'スタンプ画像が選択されていません。', 400
+
+    if file:
+        filepath = os.path.join('static', f'{file.filename}')
+        file.save(filepath)
+
+    return redirect(url_for('index'))
 
 
 #change.htmlのエンドポイント------------------------------------------------------------------------------------------------------
@@ -47,6 +65,7 @@ def conv():
     #変換用モジュールのインスタンス化
     nega = negaposi()
     mosic = MosaicCov()
+    stamp_instance = stamp()
     input_file_name = "static/img.png"
     output_file_name = "static/output.png"
     # `select` タグで選択された値を取得
@@ -81,6 +100,19 @@ def conv():
     elif selected_value == "7":
         inversion()
         conv_message = "アップロードした画像に左右反転を施す"
+    elif selected_value == "8":
+        stamp_instance.load_images()
+        stamp_choice = request.form.get('stamp_choice', type=str)
+        x = request.form.get('stamp_x', type=int)
+        y = request.form.get('stamp_y', type=int)
+        stamp_instance.set_stamp_type(stamp_choice)
+        stamp_instance.resize_stamp()
+        stamp_instance.paste_stamp(x, y)
+        stamp_instance.save_image()
+        conv_message = "アップロードした画像にスタンプを施す"
+    elif selected_value == "9":
+        convert_to_crayon_style(input_file_name, output_file_name)
+        conv_message = "アップロードした画像をクレヨン風な画像に変換する"
 
     #change.html内で変換された画像とメッセージが表示されるようにする
     output_path = os.path.join('static', 'output.png')
